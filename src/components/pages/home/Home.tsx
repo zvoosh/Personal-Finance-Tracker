@@ -288,20 +288,20 @@ const Home = () => {
           value: "Job",
         },
         {
-          text: "Food",
-          value: "Food",
+          text: "Market",
+          value: "Market",
         },
         {
-          text: "Fun",
-          value: "Fun",
+          text: "Subsciption",
+          value: "Subsciption",
         },
         {
-          text: "Tech",
-          value: "Tech",
+          text: "Music",
+          value: "Music",
         },
         {
-          text: "Education",
-          value: "Education",
+          text: "Vehicle",
+          value: "Vehicle",
         },
       ],
       onFilter: (value: any, record: any) =>
