@@ -5,4 +5,5 @@ export type Expenses = {
   date: string;
   category: string;
   id: string;
+  userId?:string;
 };

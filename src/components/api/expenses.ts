@@ -18,9 +18,3 @@ export const expensesDelete = async (id: string) => {
     `https://671b6bb62c842d92c37fd521.mockapi.io/api/expense/expenses/${id}`
   );
 };
-export const expensesCreate = async (newExp: Expenses) => {
-  return axios.post(
-    "https://671b6bb62c842d92c37fd521.mockapi.io/api/expense/expenses",
-    newExp
-  );
-};

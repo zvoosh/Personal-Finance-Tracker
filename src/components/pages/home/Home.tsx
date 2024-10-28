@@ -12,17 +12,18 @@ import {
 } from "antd";
 import { ColumnsType } from "antd/es/table";
 import { FaEye } from "react-icons/fa";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { CiCirclePlus, CiEdit } from "react-icons/ci";
 import { DatePicker } from "antd";
 import { format, isWithinInterval } from "date-fns";
 import { Dayjs } from "dayjs";
 import { HiOutlineXMark } from "react-icons/hi2";
 import { Expenses } from "../../types";
-import { expensesCreate, expensesDelete, expensesPut } from "../../api";
+import { expensesDelete, expensesPut } from "../../api";
 import { DetailModal } from "./DetailModal";
 import { Header } from "./Header";
 import { Summarium } from "./Summarium";
+import { Context } from "../../context";
 
 const { RangePicker } = DatePicker;
 
@@ -46,6 +47,7 @@ interface DataType {
 
 const Home = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const context = useContext(Context);
   const [form] = Form.useForm();
   const [formEdit] = Form.useForm();
   const [isCreating, setIsCreating] = useState(false);
@@ -55,6 +57,12 @@ const Home = () => {
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
+
+  if (!context) {
+    throw new Error("MyComponent must be used within a MyProvider");
+  }
+
+  const { value, setValue, userId, getUserExpenses } = context;
 
   // React Query hooks
   const {
@@ -70,16 +78,16 @@ const Home = () => {
       ).then((res) => res.json()),
   });
 
-  const mutation = useMutation({
-    mutationFn: (newExpense: Expenses) => expensesCreate(newExpense),
-    onSuccess: () => {
-      setIsCreating(false);
-    },
-    onError: () => {
-      message.error("Error while creating, try again.");
-      form.resetFields();
-    },
-  });
+  // const mutation = useMutation({
+  //   mutationFn: (newExpense: Expenses) => expensesCreate(newExpense),
+  //   onSuccess: () => {
+  //     setIsCreating(false);
+  //   },
+  //   onError: () => {
+  //     message.error("Error while creating, try again.");
+  //     form.resetFields();
+  //   },
+  // });
   const mutationEdit = useMutation({
     mutationFn: (newExpData: Expenses) =>
       expensesPut({ newExp: newExpData, id: newExpData.id }),
@@ -101,7 +109,7 @@ const Home = () => {
     },
   });
 
-  //Form hooks
+  //Form hooks userId
   const onFinish: FormProps<FieldType>["onFinish"] = (values) => {
     if (values) {
       const validData: Expenses = {
@@ -110,19 +118,21 @@ const Home = () => {
         category: values.category!,
         date: values.date!,
         type: values.type!,
-        id: origin.reduce((max: any, obj: any) => {
-          return obj.value > max ? obj.value : max;
-        }, -Infinity),
+        id: (
+          filteredData.reduce((max: any, obj: any) => {
+            console.log("id", parseInt(obj.id), "max", parseInt(max));
+            let objId = parseInt(obj.id);
+            return objId > max ? objId : max;
+          }, -Infinity) + 1
+        ).toString(),
+        userId: userId!
       };
-      mutation.mutate(validData, {
-        onSuccess: () => {
-          refetch();
-          setIsCreating(false);
-        },
-        onError: (error) => {
-          console.error("Mutation failed:", error);
-          // Handle error state here if needed
-        },
+      setValue((prev: any) => {
+        if (prev) {
+          return [...prev, validData];
+        } else {
+          return [validData];
+        }
       });
     }
   };
@@ -136,7 +146,21 @@ const Home = () => {
         type: values.type!,
         id: values.id!,
       };
-      mutationEdit.mutate(validData);
+      if (value?.some((item: Expenses) => {
+        return item.id === values.id;
+      })) {
+        let element = value.find((item: Expenses)=> item.id === values.id);
+        const filteredArray = value.filter((item: Expenses)=>{
+          return item !== element;
+        });
+        element = {...validData, userId: userId!};
+        setValue(()=>{
+          return [...filteredArray, element];
+        })
+        setIsEditing(false);
+      } else {
+        mutationEdit.mutate(validData);
+      }
     }
   };
 
@@ -163,7 +187,7 @@ const Home = () => {
   const handleCancelEdit = () => {
     setIsEditing(false);
   };
-  
+
   const handleDateChange = (
     dates: [Dayjs | null, Dayjs | null] | null,
     dateStrings: [string, string]
@@ -220,10 +244,21 @@ const Home = () => {
 
         return matchesSearch && (!dateRange || matchesDateRange);
       });
-      setFilteredData(newData);
-    }
-  }, [origin, searchText, dateRange]);
 
+      let combinedData;
+      let userExpensesCtx = getUserExpenses();
+      if (userExpensesCtx) {
+        combinedData = [...newData, ...userExpensesCtx];
+      } else {
+        combinedData = [...newData];
+      }
+
+      if (isCreating) {
+        setIsCreating(false);
+      }
+      setFilteredData(combinedData);
+    }
+  }, [origin, searchText, dateRange, value]);
 
   const columns: ColumnsType<DataType> = [
     {
@@ -315,11 +350,28 @@ const Home = () => {
             style={{ backgroundColor: "red" }}
             className="ml-1"
             onClick={() => {
-              mutationDelete.mutate(record.id, {
-                onSuccess: () => {
-                  refetch();
-                },
-              });
+              if (value) {
+                const included = value.includes(record);
+                if (included) {
+                  const filteredValue = value.filter(
+                    (item: Expenses) => item !== record
+                  );
+                  setValue(filteredValue);
+                  message.success("Row deleted");
+                } else {
+                  mutationDelete.mutate(record.id, {
+                    onSuccess: () => {
+                      refetch();
+                    },
+                  });
+                }
+              } else {
+                mutationDelete.mutate(record.id, {
+                  onSuccess: () => {
+                    refetch();
+                  },
+                });
+              }
             }}
           >
             <HiOutlineXMark />
@@ -349,187 +401,6 @@ const Home = () => {
 
   return (
     <div>
-      {selectedRow && (
-        <DetailModal
-          selectedRow={selectedRow}
-          isVisible
-          handleCancel={handleCancel}
-          handleOk={handleOk}
-        />
-      )}
-      <Modal
-        title={"Editing transaction"}
-        open={isEditing}
-        footer={null}
-        onCancel={() => setIsEditing(false)}
-        destroyOnClose={true}
-      >
-        <Form
-          name="basic"
-          form={formEdit}
-          labelCol={{ span: 6 }}
-          wrapperCol={{ span: 16 }}
-          style={{ maxWidth: 500 }}
-          initialValues={{ remember: true }}
-          onFinish={onFinishEditing}
-          autoComplete="off"
-          className="mt-1"
-        >
-          <Row justify={"center"}>
-            <Form.Item
-              label="Description"
-              name="description"
-              rules={[
-                {
-                  required: true,
-                  message: "Please input your description!",
-                },
-              ]}
-              className="w-100"
-            >
-              <Input placeholder="Description..." />
-            </Form.Item>
-
-            <Form.Item
-              label="Amount"
-              name="amount"
-              rules={[{ required: true, message: "Please input your amount!" }]}
-              className="w-100"
-            >
-              <InputNumber className="w-100" placeholder="Amount..." />
-            </Form.Item>
-            <Form.Item
-              label="Type"
-              name="type"
-              rules={[{ required: true, message: "Please input your type!" }]}
-              className="w-100"
-            >
-              <Input placeholder="Type..." />
-            </Form.Item>
-            <Form.Item
-              label="Date"
-              name="date"
-              rules={[{ required: true, message: "Please input your date!" }]}
-              className="w-100"
-            >
-              <Input placeholder="Date..." />
-            </Form.Item>
-            <Form.Item
-              label="Category"
-              name="category"
-              rules={[
-                { required: true, message: "Please input your category!" },
-              ]}
-              className="w-100"
-            >
-              <Input placeholder="Category..." />
-            </Form.Item>
-            <Form.Item
-              label="Id"
-              name="id"
-              className="w-100 h-0"
-              style={{ visibility: "hidden" }}
-            >
-              <Input placeholder="Id..." />
-            </Form.Item>
-          </Row>
-
-          <Row justify={"center"}>
-            <Button onClick={handleCancelEdit}>Cancel</Button>
-            <Form.Item wrapperCol={{ offset: 8, span: 16 }}>
-              <Button type="primary" htmlType="submit">
-                Submit
-              </Button>
-            </Form.Item>
-          </Row>
-        </Form>
-      </Modal>
-      <Modal
-        title={"Creating a transaction"}
-        open={isCreating}
-        footer={null}
-        onCancel={() => {
-          setIsCreating((prev) => !prev);
-        }}
-        destroyOnClose={true}
-      >
-        <Form
-          name="basic"
-          form={form}
-          labelCol={{ span: 6 }}
-          wrapperCol={{ span: 16 }}
-          style={{ maxWidth: 500 }}
-          initialValues={{ remember: true }}
-          onFinish={onFinish}
-          autoComplete="off"
-          className="mt-1"
-        >
-          <Row justify={"center"}>
-            <Form.Item
-              label="Description"
-              name="description"
-              rules={[
-                {
-                  required: true,
-                  message: "Please input your description!",
-                },
-              ]}
-              className="w-100"
-            >
-              <Input placeholder="Description..." />
-            </Form.Item>
-            <Form.Item
-              label="Amount"
-              name="amount"
-              rules={[{ required: true, message: "Please input your amount!" }]}
-              className="w-100"
-            >
-              <InputNumber placeholder="Amount..." className="w-100" />
-            </Form.Item>
-            <Form.Item
-              label="Type"
-              name="type"
-              rules={[{ required: true, message: "Please input your type!" }]}
-              className="w-100"
-            >
-              <Input placeholder="Type..." />
-            </Form.Item>
-            <Form.Item
-              label="Date"
-              name="date"
-              rules={[{ required: true, message: "Please input your date!" }]}
-              className="w-100"
-            >
-              <Input placeholder="Date..." />
-            </Form.Item>
-            <Form.Item
-              label="Category"
-              name="category"
-              rules={[
-                { required: true, message: "Please input your category!" },
-              ]}
-              className="w-100"
-            >
-              <Input placeholder="Category..." />
-            </Form.Item>
-          </Row>
-
-          <Row justify={"center"}>
-            <Button
-              onClick={() => {
-                setIsCreating((prev) => !prev);
-              }}
-            >
-              Cancel
-            </Button>
-            <Form.Item wrapperCol={{ offset: 8, span: 16 }}>
-              <Button type="primary" htmlType="submit">
-                Submit
-              </Button>
-            </Form.Item>
-          </Row>
-        </Form>
-      </Modal>
       <Header />
       <div className="w-100 h-100 flex align-center justify-center ">
         <div
@@ -611,6 +482,199 @@ const Home = () => {
             </div>
             <Summarium income={totals.income} expense={totals.expense} />
           </div>
+          {selectedRow && (
+            <DetailModal
+              selectedRow={selectedRow}
+              isVisible
+              handleCancel={handleCancel}
+              handleOk={handleOk}
+            />
+          )}
+          <Modal
+            title={"Editing transaction"}
+            open={isEditing}
+            footer={null}
+            onCancel={() => setIsEditing(false)}
+            destroyOnClose={true}
+          >
+            <Form
+              name="basic"
+              form={formEdit}
+              labelCol={{ span: 6 }}
+              wrapperCol={{ span: 16 }}
+              style={{ maxWidth: 500 }}
+              initialValues={{ remember: true }}
+              onFinish={onFinishEditing}
+              autoComplete="off"
+              className="mt-1"
+            >
+              <Row justify={"center"}>
+                <Form.Item
+                  label="Description"
+                  name="description"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Please input your description!",
+                    },
+                  ]}
+                  className="w-100"
+                >
+                  <Input placeholder="Description..." />
+                </Form.Item>
+
+                <Form.Item
+                  label="Amount"
+                  name="amount"
+                  rules={[
+                    { required: true, message: "Please input your amount!" },
+                  ]}
+                  className="w-100"
+                >
+                  <InputNumber className="w-100" placeholder="Amount..." />
+                </Form.Item>
+                <Form.Item
+                  label="Type"
+                  name="type"
+                  rules={[
+                    { required: true, message: "Please input your type!" },
+                  ]}
+                  className="w-100"
+                >
+                  <Input placeholder="Type..." />
+                </Form.Item>
+                <Form.Item
+                  label="Date"
+                  name="date"
+                  rules={[
+                    { required: true, message: "Please input your date!" },
+                  ]}
+                  className="w-100"
+                >
+                  <Input placeholder="Date..." />
+                </Form.Item>
+                <Form.Item
+                  label="Category"
+                  name="category"
+                  rules={[
+                    { required: true, message: "Please input your category!" },
+                  ]}
+                  className="w-100"
+                >
+                  <Input placeholder="Category..." />
+                </Form.Item>
+                <Form.Item
+                  label="Id"
+                  name="id"
+                  className="w-100 h-0"
+                  style={{ visibility: "hidden" }}
+                >
+                  <Input placeholder="Id..." />
+                </Form.Item>
+              </Row>
+
+              <Row justify={"center"}>
+                <Button onClick={handleCancelEdit}>Cancel</Button>
+                <Form.Item wrapperCol={{ offset: 8, span: 16 }}>
+                  <Button type="primary" htmlType="submit">
+                    Submit
+                  </Button>
+                </Form.Item>
+              </Row>
+            </Form>
+          </Modal>
+          <Modal
+            title={"Creating a transaction"}
+            open={isCreating}
+            footer={null}
+            onCancel={() => {
+              setIsCreating((prev) => !prev);
+            }}
+            destroyOnClose={true}
+          >
+            <Form
+              name="basic"
+              form={form}
+              labelCol={{ span: 6 }}
+              wrapperCol={{ span: 16 }}
+              style={{ maxWidth: 500 }}
+              initialValues={{ remember: true }}
+              onFinish={onFinish}
+              autoComplete="off"
+              className="mt-1"
+            >
+              <Row justify={"center"}>
+                <Form.Item
+                  label="Description"
+                  name="description"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Please input your description!",
+                    },
+                  ]}
+                  className="w-100"
+                >
+                  <Input placeholder="Description..." />
+                </Form.Item>
+                <Form.Item
+                  label="Amount"
+                  name="amount"
+                  rules={[
+                    { required: true, message: "Please input your amount!" },
+                  ]}
+                  className="w-100"
+                >
+                  <InputNumber placeholder="Amount..." className="w-100" />
+                </Form.Item>
+                <Form.Item
+                  label="Type"
+                  name="type"
+                  rules={[
+                    { required: true, message: "Please input your type!" },
+                  ]}
+                  className="w-100"
+                >
+                  <Input placeholder="Type..." />
+                </Form.Item>
+                <Form.Item
+                  label="Date"
+                  name="date"
+                  rules={[
+                    { required: true, message: "Please input your date!" },
+                  ]}
+                  className="w-100"
+                >
+                  <Input placeholder="Date..." />
+                </Form.Item>
+                <Form.Item
+                  label="Category"
+                  name="category"
+                  rules={[
+                    { required: true, message: "Please input your category!" },
+                  ]}
+                  className="w-100"
+                >
+                  <Input placeholder="Category..." />
+                </Form.Item>
+              </Row>
+
+              <Row justify={"center"}>
+                <Button
+                  onClick={() => {
+                    setIsCreating((prev) => !prev);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Form.Item wrapperCol={{ offset: 8, span: 16 }}>
+                  <Button type="primary" htmlType="submit">
+                    Submit
+                  </Button>
+                </Form.Item>
+              </Row>
+            </Form>
+          </Modal>
         </div>
       </div>
     </div>
