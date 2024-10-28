@@ -1,6 +1,6 @@
 # Personal Finance Tracker Application
 
-A personal app, used to track finance of it's users
+A personal app used to track finance of it's users
 
 ## Table of Contents
 
