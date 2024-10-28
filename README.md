@@ -8,8 +8,12 @@ A personal app, used to track finance of it's users
 - [Usage](#usage)
 
 ## Installation
-
-1. Install dependencies:
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/zvoosh/Personal-Finance-Tracker.git
+   cd repository
+   ```
+2. Install dependencies:
    ```bash
    npm install
    ```
