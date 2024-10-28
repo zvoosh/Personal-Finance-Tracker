@@ -98,7 +98,7 @@ const Register = () => {
                     {
                       required: true,
                       message: "Username must have more then 5 letters!",
-                      len: 5,
+                      min: 5,
                     },
                   ]}
                 >

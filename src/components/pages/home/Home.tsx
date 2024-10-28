@@ -77,17 +77,6 @@ const Home = () => {
         "https://671b6bb62c842d92c37fd521.mockapi.io/api/expense/expenses"
       ).then((res) => res.json()),
   });
-
-  // const mutation = useMutation({
-  //   mutationFn: (newExpense: Expenses) => expensesCreate(newExpense),
-  //   onSuccess: () => {
-  //     setIsCreating(false);
-  //   },
-  //   onError: () => {
-  //     message.error("Error while creating, try again.");
-  //     form.resetFields();
-  //   },
-  // });
   const mutationEdit = useMutation({
     mutationFn: (newExpData: Expenses) =>
       expensesPut({ newExp: newExpData, id: newExpData.id }),
