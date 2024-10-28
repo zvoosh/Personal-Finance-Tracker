@@ -292,8 +292,8 @@ const Home = () => {
           value: "Market",
         },
         {
-          text: "Subsciption",
-          value: "Subsciption",
+          text: "Subscription",
+          value: "Subscription",
         },
         {
           text: "Music",
