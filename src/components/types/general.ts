@@ -7,3 +7,9 @@ export type Expenses = {
   id: string;
   userId?:string;
 };
+
+export type UserType = {
+  username: string;
+  password: string;
+  id: string;
+};

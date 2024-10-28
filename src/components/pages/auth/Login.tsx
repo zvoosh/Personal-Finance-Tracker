@@ -4,17 +4,12 @@ import { useContext } from "react";
 import { RiBox3Line } from "react-icons/ri";
 import { useNavigate } from "react-router";
 import { Context } from "../../context";
+import { UserType } from "../../types";
 
 type FieldType = {
   username?: string;
   password?: string;
   id?: string;
-};
-
-type UserType = {
-  username: string;
-  password: string;
-  id: string;
 };
 
 const Login = () => {
@@ -36,7 +31,7 @@ const Login = () => {
     throw new Error("MyComponent must be used within a MyProvider");
   }
 
-  const { setUserId } = context;
+  const { setUserId, setUser } = context;
 
   const onFinish: FormProps<FieldType>["onFinish"] = (values) => {
     const validData = data.find(
@@ -46,7 +41,8 @@ const Login = () => {
     );
     console.log(validData);
     if (validData) {
-      setUserId(validData.id)
+      setUserId(validData.id);
+      setUser(validData);
       navigate("/home");
     }
     if (!validData) {
