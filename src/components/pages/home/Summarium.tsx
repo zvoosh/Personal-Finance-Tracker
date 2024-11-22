@@ -42,4 +42,4 @@ const Summarium = ({ income, expense }: { income: any; expense: any }) => {
   );
 };
 
-export { Summarium };
+export default   Summarium ;

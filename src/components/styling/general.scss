@@ -1,7 +1,38 @@
 .table-operations {
-    margin-bottom: 16px;
-  }
-  
-  .table-operations > button {
-    margin-right: 8px;
-  }
+  margin-bottom: 16px;
+}
+
+.table-operations > button {
+  margin-right: 8px;
+}
+
+.padding-transition {
+  padding: 0rem;
+  transition: padding 0.3s ease;
+}
+
+.padding-transition:hover {
+  padding: 0.1rem;
+}
+
+.sizing-transition{
+  transform: scale(1);
+  background-color: gray;
+  transition: all .3s ease;
+}
+
+.sizing-transition:hover{
+  transform: scale(1.15);
+  background-color: red;
+}
+
+
+.shadow-transition {
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.5s ease;
+}
+
+.shadow-transition:hover {
+  box-shadow: 5px 5px 10px 0px rgba(0, 0, 0, .8);
+}
+

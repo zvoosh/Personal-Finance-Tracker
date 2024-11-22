@@ -1,10 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
-import { Button, Form, FormProps, Input, message, Row } from "antd";
-import { useContext } from "react";
+import { Button, Form, FormProps, Input, Row } from "antd";
+import axios from "axios";
+import { useEffect } from "react";
 import { RiBox3Line } from "react-icons/ri";
 import { useNavigate } from "react-router";
-import { Context } from "../../context";
-import { UserType } from "../../types";
 
 type FieldType = {
   username?: string;
@@ -15,40 +13,50 @@ type FieldType = {
 const Login = () => {
   const [form] = Form.useForm();
   const navigate = useNavigate();
-  const context = useContext(Context);
-  const { isLoading, error, data } = useQuery({
-    queryKey: ["repoData"],
-    queryFn: () =>
-      fetch(
-        "https://671b6bb62c842d92c37fd521.mockapi.io/api/expense/Users"
-      ).then((res) => res.json()),
-  });
-  if (isLoading) return "Loading...";
 
-  if (error) return "An error has occurred: " + error.message;
+  useEffect(() => {
+    localStorage.clear();
+  }, []);
 
-  if (!context) {
-    throw new Error("MyComponent must be used within a MyProvider");
-  }
+  const login = async ({
+    username,
+    password,
+  }: {
+    username: any;
+    password: any;
+  }) => {
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/api/user/login",
+        {
+          username,
+          password,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-  const { setUserId, setUser } = context;
+      const { token, _id } = response.data;
+
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("userId", _id);
+
+      navigate("/chooser");
+
+      form.resetFields();
+
+      return { token, _id }; 
+    } catch (error) {
+      console.error("Login failed:", error);
+      throw new Error("Login failed");
+    }
+  };
 
   const onFinish: FormProps<FieldType>["onFinish"] = (values) => {
-    const validData = data.find(
-      (currVal: UserType) =>
-        currVal.username == values.username &&
-        currVal.password == values.password
-    );
-    console.log(validData);
-    if (validData) {
-      setUserId(validData.id);
-      setUser(validData);
-      navigate("/home");
-    }
-    if (!validData) {
-      message.error("Wrong username or password");
-      form.resetFields();
-    }
+    login({ username: values.username, password: values.password });
   };
 
   return (
@@ -65,7 +73,6 @@ const Login = () => {
         }}
       >
         <div>
-          {/* LOGIN */}
           <div className="mb-1">
             <div className="w-100 h-100 flex align-center justify-center mt-2 mb-1">
               <RiBox3Line
@@ -84,7 +91,6 @@ const Login = () => {
               LOGIN
             </div>
           </div>
-          {/* FORM */}
           <div>
             <Form
               name="basic"
@@ -153,4 +159,4 @@ const Login = () => {
   );
 };
 
-export { Login };
+export default Login;

@@ -1,8 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
-import { Button, Col, Form, FormProps, Input, message, Row } from "antd";
-import axios from "axios";
+import { Button, Form, FormProps, Input, message, Row } from "antd";
 import { RiBox3Line } from "react-icons/ri";
 import { useNavigate } from "react-router";
+import { postData } from "../../hooks";
 
 type FieldType = {
   username?: string;
@@ -21,7 +21,7 @@ const Register = () => {
 
   const mutation = useMutation({
     mutationFn: (newExpense: UserType) => {
-      return axios.post(
+      return postData(
         "https://671b6bb62c842d92c37fd521.mockapi.io/api/expense/Users",
         newExpense
       );
@@ -58,7 +58,6 @@ const Register = () => {
         style={{ borderRadius: "3.5%", boxShadow: "6px 20px 30px black" }}
       >
         <div>
-          {/* LOGIN */}
           <div>
             <div className="w-100 h-100 flex align-center justify-center mt-2 mb-1">
               <RiBox3Line
@@ -77,7 +76,6 @@ const Register = () => {
               REGISTER
             </div>
           </div>
-          {/* FORM */}
           <div>
             <Form
               name="basic"
@@ -152,4 +150,4 @@ const Register = () => {
   );
 };
 
-export { Register };
+export default   Register ;

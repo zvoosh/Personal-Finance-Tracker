@@ -1,31 +1,48 @@
 import { Button } from "antd";
-import { useContext } from "react";
-import { useNavigate } from "react-router";
-import { Context } from "../../context";
+import { useLocation, useNavigate } from "react-router";
 
 const Header = () => {
   const navigate = useNavigate();
-  const context = useContext(Context);
-  if (!context) {
-    throw new Error("MyComponent must be used within a MyProvider");
-  }
-
-  const { user } = context;
+  const location = useLocation();
   return (
     <div className="bg-blue p-1 white flex flex-row space-between">
       <div className="bold font-12">Finance Tracker</div>
-      <div className="font-11">{user && user?.username}</div>
       <div>
-        <Button
-          onClick={() => {
-            navigate("/");
-          }}
-        >
-          Logout
-        </Button>
+        {location.pathname !== "/" && (
+          <div>
+            {location.pathname !== "/chooser" && (
+              <>
+                <Button
+                  className="mr-1"
+                  onClick={() => {
+                    navigate("/chooser");
+                  }}
+                >
+                  Home
+                </Button>
+                <Button
+                  className="mr-1"
+                  onClick={() => {
+                    navigate(-1);
+                  }}
+                >
+                  Back
+                </Button>
+              </>
+            )}
+            <Button
+              onClick={() => {
+                navigate("/");
+                localStorage.clear();
+              }}
+            >
+              Logout
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
-export { Header };
+export default   Header ;
